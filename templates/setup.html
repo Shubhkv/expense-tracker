@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome — Expense Tracker</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f6fa; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .setup { background: white; border-radius: 16px; padding: 48px 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); max-width: 420px; width: 100%; text-align: center; }
+        .icon { font-size: 3em; margin-bottom: 16px; }
+        h1 { font-size: 1.4em; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+        p { color: #888; font-size: 0.9em; margin-bottom: 28px; line-height: 1.5; }
+        input { width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 1em; text-align: center; transition: border 0.2s; margin-bottom: 16px; }
+        input:focus { outline: none; border-color: #6c63ff; box-shadow: 0 0 0 3px rgba(108,99,255,0.1); }
+        input::placeholder { color: #ccc; }
+        button { width: 100%; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-size: 1em; font-weight: 600; background: #6c63ff; color: white; transition: background 0.2s; }
+        button:hover { background: #5a52d5; }
+        .footer { margin-top: 20px; font-size: 0.78em; color: #bbb; }
+    </style>
+</head>
+<body>
+    <div class="setup">
+        <div class="icon">💰</div>
+        <h1>Welcome to Expense Tracker</h1>
+        <p>Your personal finance dashboard.<br>What should we call you?</p>
+        <form method="POST">
+            <input type="text" name="name" placeholder="Enter your name" required autofocus>
+            <button type="submit">Get Started →</button>
+        </form>
+        <div class="footer">Your data stays on this device</div>
+    </div>
+</body>
+</html>

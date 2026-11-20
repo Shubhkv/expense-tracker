@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f6fa; color: #333; }
+        
+        header { background: white; padding: 16px 32px; border-bottom: 1px solid #e8e8e8; display: flex; justify-content: space-between; align-items: center; }
+        .header-left h1 { font-size: 1.3em; font-weight: 700; color: #1a1a2e; }
+        .header-left .greeting { font-size: 0.85em; color: #888; margin-top: 2px; }
+        .avatar { width: 38px; height: 38px; border-radius: 50%; background: #6c63ff; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95em; }
+
+        .page { max-width: 1000px; margin: 24px auto; padding: 0 20px; }
+
+        /* Toast */
+        .toast { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; padding: 12px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; font-weight: 500; animation: slideDown 0.3s ease; }
+        .toast .close { cursor: pointer; font-size: 1.2em; color: #81c784; padding: 0 4px; background: none; border: none; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Stats row */
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+        .stat-card .label { font-size: 0.75em; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .stat-card .value { font-size: 1.6em; font-weight: 700; color: #1a1a2e; }
+        .stat-card .sub { font-size: 0.8em; color: #aaa; margin-top: 4px; }
+
+        /* Main grid */
+        .grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 20px; }
+        .card h2 { font-size: 0.95em; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+
+        /* Add form */
+        .add-form { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 20px; border-left: 4px solid #6c63ff; }
+        .add-form h2 { font-size: 0.95em; font-weight: 600; color: #6c63ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        label { font-size: 0.78em; color: #888; display: block; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 0.9em; background: #fafafa; transition: border 0.2s; }
+        input:focus, select:focus { outline: none; border-color: #6c63ff; background: white; box-shadow: 0 0 0 3px rgba(108,99,255,0.1); }
+        .btn-add { width: 100%; margin-top: 12px; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.95em; font-weight: 600; background: #6c63ff; color: white; transition: background 0.2s; }
+        .btn-add:hover { background: #5a52d5; }
+
+        .btn { padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.88em; font-weight: 600; transition: opacity 0.2s; text-decoration: none; display: inline-block; text-align: center; }
+        .btn:hover { opacity: 0.85; }
+        .btn-sm { padding: 5px 12px; font-size: 0.78em; border-radius: 6px; }
+        .btn-edit { background: #e8f0fe; color: #1967d2; }
+        .btn-delete { background: #fce8e6; color: #d93025; }
+        .btn-export { background: #e6f4ea; color: #1e8e3e; }
+        .btn-filter { background: #f1f3f4; color: #444; }
+
+        /* Filters */
+        .filter-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+        .filter-row .btn { margin-top: 18px; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+        thead th { padding: 8px 12px; text-align: left; font-size: 0.75em; color: #888; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid #f0f0f0; }
+        tbody td { padding: 11px 12px; border-bottom: 1px solid #f7f7f7; vertical-align: middle; }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: #fafafa; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75em; font-weight: 600; }
+        .badge-Food { background: #fff3e0; color: #e65100; }
+        .badge-Transport { background: #e3f2fd; color: #1565c0; }
+        .badge-Entertainment { background: #f3e5f5; color: #6a1b9a; }
+        .badge-Shopping { background: #fce4ec; color: #880e4f; }
+        .badge-Bills { background: #e8f5e9; color: #2e7d32; }
+        .badge-Other { background: #f5f5f5; color: #616161; }
+        .amount { font-weight: 600; color: #1a1a2e; }
+        .actions { display: flex; gap: 6px; }
+
+        /* Sidebar */
+        .chart-wrap { position: relative; height: 180px; margin-bottom: 16px; }
+        .category-list { list-style: none; }
+        .category-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.88em; }
+        .category-list li:last-child { border-bottom: none; }
+        .cat-name { display: flex; align-items: center; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .cat-amount { font-weight: 600; }
+
+        /* Empty state */
+        .empty { text-align: center; padding: 48px 20px; color: #bbb; }
+        .empty-icon { font-size: 3em; margin-bottom: 12px; }
+        .empty-text { font-size: 0.95em; margin-bottom: 8px; color: #888; }
+        .empty-hint { font-size: 0.82em; color: #bbb; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stats { grid-template-columns: 1fr; }
+            .grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .filter-row { flex-direction: column; align-items: stretch; }
+            .filter-row .btn { margin-top: 0; }
+            header { padding: 14px 16px; }
+            .page { padding: 0 12px; }
+            table { font-size: 0.82em; }
+            .actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <h1>💰 Expense Tracker</h1>
+        <div class="greeting">{{ greeting }}, {{ user }}</div>
+    </div>
+    <div class="avatar">{{ user[0]|upper }}</div>
+</header>
+
+<div class="page">
+
+    <!-- Toast notification -->
+    {% if success %}
+    <div class="toast" id="toast">
+        <span>✓ {{ success }}</span>
+        <button class="close" onclick="document.getElementById('toast').remove()">×</button>
+    </div>
+    <script>setTimeout(function(){ var t = document.getElementById('toast'); if(t) t.remove(); }, 4000);</script>
+    {% endif %}
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="label">{{ "Filtered Total" if is_filtered else "Total Spent" }}</div>
+            <div class="value">₹{{ filtered_total|money }}</div>
+            <div class="sub">{% if is_filtered %}All-time: ₹{{ total|money }}{% else %}All time{% endif %}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Transactions</div>
+            <div class="value">{{ expenses|length }}</div>
+            <div class="sub">{{ "filtered" if is_filtered else "all time" }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Top Category</div>
+            <div class="value">{{ summary[0][0] if summary else "—" }}</div>
+            <div class="sub">{{ "₹" + summary[0][1]|money if summary else "" }}</div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Left column -->
+        <div>
+            <!-- Add expense -->
+            <div class="add-form">
+                <h2>+ New Expense</h2>
+                <form method="POST" action="/add">
+                    <div class="form-row">
+                        <div>
+                            <label>Category</label>
+                            <select name="category" required>
+                                <option value="">Select…</option>
+                                <option>Food</option>
+                                <option>Transport</option>
+                                <option>Entertainment</option>
+                                <option>Shopping</option>
+                                <option>Bills</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Description</label>
+                            <input type="text" name="description" placeholder="e.g. Lunch at cafe" required>
+                        </div>
+                        <div>
+                            <label>Amount (₹)</label>
+                            <input type="number" name="amount" placeholder="0.00" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <button class="btn-add" type="submit">+ Add Expense</button>
+                </form>
+            </div>
+
+            <!-- Filter -->
+            <div class="card">
+                <h2>Filter</h2>
+                <form method="GET" action="/">
+                    <div class="filter-row">
+                        <div>
+                            <label>Month</label>
+                            <input type="month" name="month" value="{{ month }}">
+                        </div>
+                        <div>
+                            <label>Category</label>
+                            <select name="category">
+                                <option value="">All</option>
+                                {% for c in categories %}
+                                <option value="{{ c[0] }}" {% if c[0]==category %}selected{% endif %}>{{ c[0] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <a href="/" class="btn btn-filter" style="margin-top:18px">Clear</a>
+                        <button class="btn btn-filter" type="submit" style="margin-top:18px">Apply</button>
+                        <a href="/export" class="btn btn-export" style="margin-top:18px">↓ Export CSV</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table -->
+            <div class="card">
+                <h2>Transactions</h2>
+                {% if expenses %}
+                <table>
+                    <thead>
+                        <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for e in expenses %}
+                        <tr>
+                            <td>{{ e[1]|dateformat }}</td>
+                            <td><span class="badge badge-{{ e[2] }}">{{ e[2] }}</span></td>
+                            <td>{{ e[3] }}</td>
+                            <td class="amount">₹{{ e[4]|money }}</td>
+                            <td>
+                                <div class="actions">
+                                    <a href="/edit/{{ e[0] }}" class="btn btn-sm btn-edit">Edit</a>
+                                    <a href="/delete/{{ e[0] }}" class="btn btn-sm btn-delete" onclick="return confirm('Delete this expense?')">Delete</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty">
+                    <div class="empty-icon">📭</div>
+                    <div class="empty-text">No expenses found</div>
+                    <div class="empty-hint">Add your first expense using the form above ↑</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div>
+            <div class="card">
+                <h2>Breakdown</h2>
+                {% if summary %}
+                <div class="chart-wrap">
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <ul class="category-list">
+                    {% set colors = ["#6c63ff","#48c774","#ffdd57","#ff3860","#3273dc","#aaa"] %}
+                    {% for row in summary %}
+                    <li>
+                        <span class="cat-name">
+                            <span class="dot" style="background:{{ colors[loop.index0 % 6] }}"></span>
+                            {{ row[0] }}
+                        </span>
+                        <span class="cat-amount">₹{{ row[1]|money }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="empty">
+                    <div class="empty-text">No data yet</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if summary %}
+<script>
+    const colors = ["#6c63ff","#48c774","#ffdd57","#ff3860","#3273dc","#aaa"];
+    const labels = [{% for row in summary %}"{{ row[0] }}",{% endfor %}];
+    const data = [{% for row in summary %}{{ row[1] }},{% endfor %}];
+    new Chart(document.getElementById("pieChart"), {
+        type: "doughnut",
+        data: {
+            labels: labels,
+            datasets: [{ data: data, backgroundColor: colors, borderWidth: 2 }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            cutout: "65%"
+        }
+    });
+</script>
+{% endif %}
+</body>
+</html>

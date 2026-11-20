@@ -11,6 +11,12 @@ def create_tables():
                 amount NUMERIC(10, 2) NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """)
         print("Tables created successfully.")
 
 if __name__ == "__main__":
