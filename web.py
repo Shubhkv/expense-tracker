@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from db import get_connection
-from datetime import datetime
+from datetime import datetime, date
 
 app = Flask(__name__)
 app.secret_key = "expense-tracker-dev"
@@ -50,16 +50,16 @@ def index():
     if not user:
         return redirect(url_for("setup"))
 
-    month = request.args.get("month", "")
+    filter_date = request.args.get("date", "")
     category = request.args.get("category", "")
     success = request.args.get("success", "")
     
     query = "SELECT id, date, category, description, amount FROM expenses WHERE 1=1"
     params = []
     
-    if month:
-        query += " AND TO_CHAR(date, 'YYYY-MM') = %s"
-        params.append(month)
+    if filter_date:
+        query += " AND date = %s"
+        params.append(filter_date)
     if category:
         query += " AND category = %s"
         params.append(category)
@@ -74,12 +74,12 @@ def index():
         total = conn.execute("SELECT SUM(amount) FROM expenses").fetchone()[0] or 0
         categories = conn.execute("SELECT DISTINCT category FROM expenses ORDER BY category").fetchall()
         
-        if month or category:
+        if filter_date or category:
             filter_query = "SELECT SUM(amount) FROM expenses WHERE 1=1"
             filter_params = []
-            if month:
-                filter_query += " AND TO_CHAR(date, 'YYYY-MM') = %s"
-                filter_params.append(month)
+            if filter_date:
+                filter_query += " AND date = %s"
+                filter_params.append(filter_date)
             if category:
                 filter_query += " AND category = %s"
                 filter_params.append(category)
@@ -87,13 +87,14 @@ def index():
         else:
             filtered_total = total
     
-    is_filtered = bool(month or category)
+    is_filtered = bool(filter_date or category)
     greeting = get_greeting()
+    today_str = date.today().isoformat()
     return render_template("index.html", expenses=expenses, summary=summary,
                          total=total, filtered_total=filtered_total,
-                         categories=categories, month=month, category=category,
+                         categories=categories, date=filter_date, category=category,
                          is_filtered=is_filtered, success=success,
-                         user=user, greeting=greeting)
+                         user=user, greeting=greeting, today=today_str)
 
 @app.route("/add", methods=["POST"])
 def add():
