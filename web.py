@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for
 from db import get_connection
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "expense-tracker-dev"
@@ -15,8 +16,40 @@ def date_filter(value):
         return value.strftime("%d %b %Y")
     return str(value)
 
+def get_user():
+    with get_connection() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key='user_name'").fetchone()
+        return row[0] if row else None
+
+def get_greeting():
+    hour = datetime.now().hour
+    if hour < 12:
+        return "Good morning"
+    elif hour < 17:
+        return "Good afternoon"
+    else:
+        return "Good evening"
+
+@app.route("/setup", methods=["GET", "POST"])
+def setup():
+    if request.method == "POST":
+        name = request.form["name"].strip()
+        if name:
+            with get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO settings (key, value) VALUES ('user_name', %s) "
+                    "ON CONFLICT (key) DO UPDATE SET value = %s",
+                    (name, name)
+                )
+            return redirect(url_for("index", success="Welcome, " + name + "!"))
+    return render_template("setup.html")
+
 @app.route("/")
 def index():
+    user = get_user()
+    if not user:
+        return redirect(url_for("setup"))
+
     month = request.args.get("month", "")
     category = request.args.get("category", "")
     success = request.args.get("success", "")
@@ -41,7 +74,6 @@ def index():
         total = conn.execute("SELECT SUM(amount) FROM expenses").fetchone()[0] or 0
         categories = conn.execute("SELECT DISTINCT category FROM expenses ORDER BY category").fetchall()
         
-        # Filtered total
         if month or category:
             filter_query = "SELECT SUM(amount) FROM expenses WHERE 1=1"
             filter_params = []
@@ -56,10 +88,12 @@ def index():
             filtered_total = total
     
     is_filtered = bool(month or category)
+    greeting = get_greeting()
     return render_template("index.html", expenses=expenses, summary=summary,
                          total=total, filtered_total=filtered_total,
                          categories=categories, month=month, category=category,
-                         is_filtered=is_filtered, success=success)
+                         is_filtered=is_filtered, success=success,
+                         user=user, greeting=greeting)
 
 @app.route("/add", methods=["POST"])
 def add():
@@ -93,7 +127,8 @@ def edit(id):
         return redirect(url_for("index", success="Expense updated"))
     with get_connection() as conn:
         expense = conn.execute("SELECT id, date, category, description, amount FROM expenses WHERE id=%s", (id,)).fetchone()
-    return render_template("edit.html", expense=expense)
+    user = get_user()
+    return render_template("edit.html", expense=expense, user=user)
 
 @app.route("/export")
 def export():
